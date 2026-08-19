@@ -15,24 +15,26 @@ snapshot is bounded, and the HTTP surface is JSON-only with bearer authenticatio
 2. Object PUT accepts only a generated-byte specification, validates bucket/key/limits, and binds request key to canonical intent.
 3. PUT writes and verifies replicas before committing an immutable version/current pointer; two verified same-host copies are the
    visibility threshold and normal execution writes all three.
-4. Exact retry replays the original result. Reusing an identity with changed intent returns `intent_conflict`.
-5. Optional current-version precondition prevents a lost update. A mismatch returns `precondition_failed` without creating a
+4. Before filesystem publication, an expiring non-visible write intent protects the digest from GC. Its TTL outlives the supported
+   bounded write/retry window and it is cleared atomically with a successful version/part commit.
+5. Exact retry replays the original result. Reusing an identity with changed intent returns `intent_conflict`.
+6. Optional current-version precondition prevents a lost update. A mismatch returns `precondition_failed` without creating a
    version.
-6. GET selects current or explicit version, distinguishes tombstone/not-found/integrity failure, verifies full length/SHA-256, and
+7. GET selects current or explicit version, distinguishes tombstone/not-found/integrity failure, verifies full length/SHA-256, and
    may return one validated byte range plus its full-object evidence.
-7. Missing or corrupt replicas never serve bytes. A healthy fallback produces a degraded receipt and durable repair work.
-8. Repair requires the current placement and worker generation, rechecks a healthy source and manifest, publishes a verified copy,
+8. Missing or corrupt replicas never serve bytes. A healthy fallback produces a degraded receipt and durable repair work.
+9. Repair requires the current placement and worker generation, rechecks a healthy source and manifest, publishes a verified copy,
    and rejects stale work.
-9. DELETE creates an immutable tombstone version and replayable result; retained historical data is not silently erased.
-10. Multipart initiation binds bucket/key, exact expected part count, total bound, and expiry generation. Parts are immutable and
+10. DELETE creates an immutable tombstone version and replayable result; retained historical data is not silently erased.
+11. Multipart initiation binds bucket/key, exact expected part count, total bound, and expiry generation. Parts are immutable and
     independently replicated/verified.
-11. Completion requires exactly parts `1..N`, recomputes the ordered final bytes/digest, writes final replicas, and commits one
+12. Completion requires exactly parts `1..N`, recomputes the ordered final bytes/digest, writes final replicas, and commits one
     visible version/result. Abort/expiry and completion are mutually exclusive under a row lock.
-12. LIST materializes one key-ordered current-state snapshot. Pagination reads only that stored array even after later PUT/DELETE.
-13. Orphan scan derives live digests from committed non-tombstone versions and open multipart parts. Recent or ambiguous files are
-    never GC candidates.
-14. GC requires retention elapsed and the current maintenance generation immediately before deletion. Referenced files are kept.
-15. State, logs, and benchmark output expose counts and fixed fixture metadata, not object identities or bytes.
+13. LIST materializes one key-ordered current-state snapshot. Pagination reads only that stored array even after later PUT/DELETE.
+14. Orphan scan derives live digests from committed non-tombstone versions, unexpired open parts, and unexpired write intents.
+    Recent or ambiguous files are never GC candidates.
+15. GC requires retention elapsed and the current maintenance generation immediately before deletion. Referenced files are kept.
+16. State, logs, and benchmark output expose counts and fixed fixture metadata, not object identities or bytes.
 
 ## Limits
 

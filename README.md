@@ -1,5 +1,7 @@
 # S3-like Object Storage Lab
 
+[![CI](https://github.com/estelledc/system-design-24-object-storage/actions/workflows/ci.yml/badge.svg)](https://github.com/estelledc/system-design-24-object-storage/actions/workflows/ci.yml)
+
 This clean-room system-design practice starts with one question: when object bytes are copied to several local storage-node
 directories and metadata changes visibility, what receipts prove which bytes and object version are durable, readable, repairable,
 or still orphaned after a crash?
@@ -8,16 +10,42 @@ The prompt title is “S3-like Object Storage.” This repository does not copy 
 diagram, object, bucket/key list, benchmark, or proprietary behavior. The initial contract is frozen from the title alone before
 reading the fixed secondary chapter.
 
-## Current phase
+## What is implemented
 
-Source-calibrated v0.1 design. The closed-book contract is frozen at commit
-`76a87918dbed530b33c7a9231656961435433aa4`; the fixed secondary chapter and primary sources have now been compared without
-copying unlicensed material. Implementation, executable verification, benchmark, public remote, and CI are pending.
+The closed-book contract is frozen at commit `76a87918dbed530b33c7a9231656961435433aa4`; the fixed secondary chapter and primary
+sources were then compared without copying unlicensed material. v0.1 implements the selected invariant with:
 
-The selected slice uses PostgreSQL as logical visibility authority and three content-addressed directories on one host. A replica
-counts only after temp write, file sync, atomic rename, parent-directory sync, and full SHA-256 readback. Metadata requires two
-verified copies, immutable versions, stable result replay, tombstones, exact multipart completion, snapshot listing, generation-
-fenced repair, and retention-aware orphan GC.
+- PostgreSQL 17 as bucket, immutable-version, current-pointer, request-receipt, multipart, list-snapshot, repair, and GC authority;
+- three content-addressed directories on one host, with two verified copies required for visibility;
+- temp write, file sync, rename, parent-directory sync, full SHA-256 readback, and re-sync before adopting an existing exact copy;
+- an expiring non-visible write intent that protects the filesystem/metadata gap from concurrent GC;
+- exact request replay, changed-intent conflict, version preconditions, tombstones, old-version reads, and full-integrity ranges;
+- immutable multipart parts and exactly-once local completion—deliberately stricter than Amazon S3 part replacement semantics;
+- materialized list snapshots, corruption fallback, generation-fenced repair, orphan scan, and retention-aware deletion;
+- JSON HTTP on loopback with one synthetic bearer token and privacy-bounded logs.
+
+This is not an S3 clone. It implements no XML, SigV4, provider ETag, cloud account, arbitrary upload, independent storage node,
+consensus, erasure coding, backup/restore, multi-region behavior, durability percentage, availability SLA, or production capacity.
+
+## Run the gates
+
+Use a disposable PostgreSQL 17 database. `sql/schema.sql` drops and rebuilds this lab's tables.
+
+```bash
+npm ci --ignore-scripts
+docker compose up -d postgres
+export DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/object_storage
+export OBJECT_API_TOKEN=local-synthetic-token-0001
+npm run check:ci
+```
+
+`npm run check:ci` runs repository policy/syntax checks, nine pure tests, four real PostgreSQL/filesystem integration groups, six
+true `SIGKILL` recovery cases, a real loopback HTTP state request, dependency audit, and the bounded benchmark. Infrastructure
+tests fail rather than skip if PostgreSQL or filesystem behavior is unavailable.
+
+The fixed benchmark writes 64 unique 16 KiB objects, performs 64 full and 64 range reads, completes one four-part 64 KiB object,
+materializes 16 list snapshots, repairs one corrupt copy, and reclaims deliberately unreachable files. Its timings describe only
+that exact runner and fixture.
 
 ## Read first
 
@@ -37,6 +65,11 @@ fenced repair, and retention-aware orphan GC.
 Input accepted, bytes written, file flushed, directory entry durable, replica readback verified, metadata version committed, key
 visible, GET digest verified, replica repaired, backup complete, restore tested, client consumed, and external acceptance are
 different facts. This lab will name and test only the boundaries it reaches.
+
+Current executable evidence proves only synchronous same-host file publication/readback, local PostgreSQL visibility/replay,
+selected process-crash recovery, verified reads, one repair, and fenced local reclamation in the named fixture. A green CI job does
+not prove power-loss behavior, independent failure domains, backup/restore, S3 compatibility, production readiness, client
+consumption, or external acceptance.
 
 ## License
 

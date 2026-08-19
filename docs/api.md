@@ -16,12 +16,14 @@
 ```json
 {
   "pattern": "alpha",
-  "repeat": 64
+  "repeat": 64,
+  "variant": 7
 }
 ```
 
-`pattern` is one of `alpha`, `beta`, `gamma`, or `delta`; `repeat` is a positive integer. The service expands a fixed public
-synthetic pattern, rejects results above 65,536 bytes, and hashes the exact bytes. This is a test fixture, not a streaming upload.
+`pattern` is one of `alpha`, `beta`, `gamma`, or `delta`; `repeat` is a positive integer; optional `variant` is `0..65535` and makes
+otherwise equal fixtures distinct. The service expands a fixed public 16-byte synthetic block, rejects results above 65,536 bytes,
+and hashes the exact bytes. This is a test fixture, not a streaming upload.
 
 ## Routes
 

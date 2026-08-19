@@ -59,3 +59,17 @@ Independent disk/host/rack/zone failure, controller cache behavior, sudden power
 HA, network partitions, consensus, erasure coding, multi-region consistency, backup/restore, arbitrary streaming objects, tenant
 isolation, encryption/KMS, S3 compatibility, production load, legal erasure, client consumption, business outcome, and external
 acceptance remain unproved.
+
+## Local evidence before publication
+
+On 2026-08-19, the implementation passed on Node `v26.7.0` and PostgreSQL `17.11` on a local same-host filesystem:
+
+- 9/9 pure tests;
+- 4/4 PostgreSQL/filesystem integration groups with zero skip/todo;
+- 6/6 externally observed `SIGKILL` processes across first-replica, PUT commit, part commit, completion commit, and DELETE commit;
+- corruption fallback plus verified repair, one orphan reclamation, materialized listing, and zero queried invariant violations;
+- fixed benchmark: 64 × 16 KiB PUT, 64 full reads, 64 full-verified range reads, 4-part 64 KiB completion, 16 snapshots,
+  195 live blob files / 3,342,336 bytes after reclaiming 13 unreachable files.
+
+These are local observations, not public CI receipts. Node 22/24/26 and Linux/PostgreSQL service evidence remain pending until the
+public workflow completes.

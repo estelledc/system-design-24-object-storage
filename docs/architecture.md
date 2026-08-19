@@ -18,7 +18,7 @@ JSON HTTP / service validation -- canonical intent + stable identity
       |
       v
 PostgreSQL 17 authority
-  buckets / mutation_receipts
+  buckets / mutation_receipts / expiring write_intents
   object_versions -> object_heads
   replicas / version_replicas
   multipart_uploads / multipart_parts
@@ -33,12 +33,16 @@ must never expose an unverified version.
 
 1. Validate synthetic principal, request key, bucket/key, generated-byte spec, precondition, and size.
 2. Canonicalize the immutable intent and calculate the intended content digest and deterministic version identity.
-3. For each fixed node, publish or adopt exact content: temp write, file sync, rename, directory sync, reopen, length/SHA-256.
-4. If fewer than two receipts verify, return `replica_threshold_not_met`; no version is visible.
-5. Begin a short database transaction, take request and bucket/key advisory locks, and look up the mutation receipt.
-6. Replay exact committed intent or reject changed intent. Recheck the bucket and optional current-version precondition.
-7. Insert immutable version, replica references, current pointer, and original result in one transaction.
-8. Commit. A configured crash hook can terminate here before the response; retry returns the stored result.
+3. Register or renew an expiring, non-visible write intent under the request identity and GC shared fence. A committed result is
+   replayed before any filesystem work.
+4. For each fixed node, publish or adopt exact content: temp write, file sync, rename, directory sync, reopen, length/SHA-256. An
+   adopted file is synced again in this call before its new receipt is issued.
+5. If fewer than two receipts verify, return `replica_threshold_not_met`; no version is visible.
+6. Begin a short database transaction, take request and bucket/key advisory locks, and look up the mutation receipt.
+7. Replay exact committed intent or reject changed intent. Recheck the bucket and optional current-version precondition.
+8. Insert immutable version, replica references, current pointer, and original result, then clear the write intent in one
+   transaction.
+9. Commit. A configured crash hook can terminate here before the response; retry returns the stored result.
 
 Writing replicas outside the transaction prevents filesystem waits from holding database locks. It also means a losing concurrent
 precondition or rolled-back transaction can leave content-addressed files. Adoption and fenced GC own that window.
@@ -75,8 +79,9 @@ later PUT/DELETE cannot alter earlier pages.
 
 ## Reachability and GC
 
-A filesystem digest is reachable if referenced by any retained non-tombstone object version or open multipart part. An orphan scan
-records node/digest/mtime observations but does not delete. GC may remove a file only when:
+A filesystem digest is reachable if referenced by any retained non-tombstone object version, unexpired open multipart part, or
+unexpired write intent. The write-intent TTL must outlive the supported bounded write/retry window. An orphan scan records
+node/digest/mtime observations but does not delete. GC may remove a file only when:
 
 1. the observation is older than the configured retention cutoff;
 2. a fresh database query still finds no reference;

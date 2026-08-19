@@ -25,7 +25,8 @@ and maintenance-generation authority. Store bytes in three fixed content-address
 - Normal writes target all three directories; metadata visibility requires at least two verified replicas. These are same-host
   receipts, not independent disk/host/rack/region durability.
 - Files are written before the metadata transaction. A failed/rolled-back transaction can therefore create an orphan; it cannot
-  create a visible version. Reachability plus retention plus a maintenance generation governs deletion.
+  create a visible version. Before writing, an expiring non-visible write intent protects that in-flight digest from GC; visibility
+  still belongs only to the version transaction. Reachability plus retention plus a maintenance generation governs deletion.
 - Request and entity identities bind a canonical intent digest. Exact retries return the stored result; changed intent conflicts.
 - A key mutation takes a stable advisory lock. Version, current pointer, replica references, and response receipt commit together.
 - Every overwrite creates an immutable version. DELETE creates a tombstone version. Explicit retained versions stay readable.
@@ -60,6 +61,8 @@ and maintenance-generation authority. Store bytes in three fixed content-address
 - Verifying an entire object before a range is intentionally expensive; bounded objects make the integrity rule executable. A
   production design would need authenticated chunk manifests or another range-integrity scheme.
 - Content addressing permits deduplication/adoption, but physical deletion must consider every retained version and open part.
+- Write-intent expiry is a safety parameter: it must outlive every supported bounded publication/retry. An operator cannot shorten
+  it below the active-write window and still claim GC safety.
 - The lab can prove file/process/database recovery for its fixture. It cannot prove power-loss behavior beyond the operating-system
   contract, backup, restore, legal erasure, cloud durability, SLA, or external acceptance.
 - Any future packed storage, erasure coding, independent nodes, consensus, signed API, arbitrary streaming body, multi-region

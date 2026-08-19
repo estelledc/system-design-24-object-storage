@@ -10,16 +10,26 @@ reading the fixed secondary chapter.
 
 ## Current phase
 
-Closed-book contract only. Source comparison, standards/vendor review, storage/metadata choice, implementation, tests, benchmark,
-public remote, CI, deployment, durability, SLA, backup/restore, and external acceptance are pending.
+Source-calibrated v0.1 design. The closed-book contract is frozen at commit
+`76a87918dbed530b33c7a9231656961435433aa4`; the fixed secondary chapter and primary sources have now been compared without
+copying unlicensed material. Implementation, executable verification, benchmark, public remote, and CI are pending.
 
-Candidate concerns include immutable object versions, content digests, verified replica receipts, atomic visibility, stable retries,
-multipart completion, range reads, tombstones, snapshot listing, repair, orphan reclamation, GC fencing, and privacy-bounded
-observability. They remain hypotheses until source review and executable validation.
+The selected slice uses PostgreSQL as logical visibility authority and three content-addressed directories on one host. A replica
+counts only after temp write, file sync, atomic rename, parent-directory sync, and full SHA-256 readback. Metadata requires two
+verified copies, immutable versions, stable result replay, tombstones, exact multipart completion, snapshot listing, generation-
+fenced repair, and retention-aware orphan GC.
 
 ## Read first
 
 - [Closed-book contract](docs/closed-book-contract.md)
+- [Source comparison](docs/research-log.md)
+- [Requirements](docs/requirements.md)
+- [Architecture](docs/architecture.md)
+- [API contract](docs/api.md)
+- [Operations](docs/operations.md)
+- [Threat model](docs/threat-model.md)
+- [Verification plan](docs/verification.md)
+- [ADR: PostgreSQL metadata and content-addressed replicas](docs/adr/0001-postgres-metadata-and-content-addressed-replicas.md)
 - [Security policy](SECURITY.md)
 
 ## Evidence boundary

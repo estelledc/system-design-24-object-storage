@@ -71,5 +71,19 @@ On 2026-08-19, the implementation passed on Node `v26.7.0` and PostgreSQL `17.11
 - fixed benchmark: 64 × 16 KiB PUT, 64 full reads, 64 full-verified range reads, 4-part 64 KiB completion, 16 snapshots,
   195 live blob files / 3,342,336 bytes after reclaiming 13 unreachable files.
 
-These are local observations, not public CI receipts. Node 22/24/26 and Linux/PostgreSQL service evidence remain pending until the
-public workflow completes.
+These are local observations, not public CI receipts.
+
+## Public implementation receipts
+
+- Implementation commit: [`fda6421968cedea6fc95a864b3d35da22f4ca9ea`](https://github.com/estelledc/system-design-24-object-storage/commit/fda6421968cedea6fc95a864b3d35da22f4ca9ea)
+- Workflow: [run 32208588981](https://github.com/estelledc/system-design-24-object-storage/actions/runs/32208588981), completed successfully on 2026-08-19.
+- Jobs: [Node 22 / PostgreSQL 17.11](https://github.com/estelledc/system-design-24-object-storage/actions/runs/32208588981/job/95936550703),
+  [Node 24 / PostgreSQL 17.11](https://github.com/estelledc/system-design-24-object-storage/actions/runs/32208588981/job/95936550727), and
+  [Node 26 / PostgreSQL 17.11](https://github.com/estelledc/system-design-24-object-storage/actions/runs/32208588981/job/95936550742) all succeeded on Linux with the real filesystem gate.
+- The Node 22 log records 9/9 pure tests and 4/4 integration groups, with 0 fail/skip/todo, six externally observed `SIGKILL`
+  recoveries, high-severity dependency vulnerabilities 0, and the full fixed benchmark.
+- Its benchmark observation was 195 live same-host blob files / 3,342,336 bytes after 13 unreachable files were reclaimed. Timings
+  are intentionally omitted here because they are runner observations, not a performance promise.
+
+This run validates only commit `fda6421` and the named Linux/PostgreSQL/runtime fixtures. It does not promote any excluded cloud,
+durability, backup/restore, SLA, production, client-consumption, or external-acceptance claim.

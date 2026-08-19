@@ -47,6 +47,10 @@ The fixed benchmark writes 64 unique 16 KiB objects, performs 64 full and 64 ran
 materializes 16 list snapshots, repairs one corrupt copy, and reclaims deliberately unreachable files. Its timings describe only
 that exact runner and fixture.
 
+Implementation commit [`fda6421968cedea6fc95a864b3d35da22f4ca9ea`](https://github.com/estelledc/system-design-24-object-storage/commit/fda6421968cedea6fc95a864b3d35da22f4ca9ea)
+passed the full public matrix in [GitHub Actions run 32208588981](https://github.com/estelledc/system-design-24-object-storage/actions/runs/32208588981):
+Node 22, 24, and 26 with PostgreSQL 17.11 and a real Linux filesystem all completed successfully.
+
 ## Read first
 
 - [Closed-book contract](docs/closed-book-contract.md)
